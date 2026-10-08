@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1a0e15">
+    <title>{% block title %}FilmyQui: find your next movie{% endblock %}</title>
+    <meta name="description" content="Browse popular movies, watch trailers, see the cast, read reviews and keep a watchlist.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎬%3C/text%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="site-header">
+        <div class="wrap bar">
+            <a class="logo" href="{{ url_for('index') }}">FilmyQui</a>
+            <nav class="nav" aria-label="Main">
+                <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}aria-current="page"{% endif %}>Home</a>
+                <a href="{{ url_for('watchlist') }}" {% if request.endpoint == 'watchlist' %}aria-current="page"{% endif %}>Watchlist{% if watchlist_count %}<span class="count">{{ watchlist_count }}</span>{% endif %}</a>
+            </nav>
+            <form class="search" action="{{ url_for('search') }}" method="get" role="search">
+                <label class="sr" for="q">Search movies</label>
+                <input id="q" type="search" name="query" placeholder="Search movies" value="{{ query or '' }}" required>
+                <button class="btn btn-primary" type="submit">Search</button>
+            </form>
+        </div>
+    </header>
+
+    <main id="main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="wrap flashes" role="status">
+            {% for category, message in messages %}
+            <p class="flash flash-{{ category }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="wrap">
+            <p>Made by Punit.</p>
+            <p class="fine">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+        </div>
+    </footer>
+</body>
+</html>

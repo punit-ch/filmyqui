@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import movie_card, watchlist_button, pagination %}
+
+{% block title %}{{ heading }} | FilmyQui{% endblock %}
+
+{% block content %}
+
+{% if featured %}
+<section class="wrap">
+    <div class="hero">
+        <img class="hero-img" src="{{ featured.backdrop_path|img('w1280') }}" alt="" fetchpriority="high">
+        <div class="hero-copy">
+            <h1>{{ featured.title }}</h1>
+            <p class="hero-facts">
+                {% if featured.release_date %}<span>{{ featured.release_date[:4] }}</span>{% endif %}
+                {% if featured.vote_count and featured.vote_average %}<span class="score"><span aria-hidden="true">★</span> {{ '%.1f'|format(featured.vote_average) }}</span>{% endif %}
+            </p>
+            <p class="hero-overview">{{ featured.overview }}</p>
+            <div class="actions">
+                <a class="btn btn-primary" href="{{ url_for('movie', movie_id=featured.id) }}">View details</a>
+                {{ watchlist_button(featured.id, featured.id in saved_ids, current_url) }}
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="wrap" id="movies">
+    <{{ 'h2' if featured else 'h1' }} class="section-title">{{ heading }}</{{ 'h2' if featured else 'h1' }}>
+
+    <nav class="tabs" aria-label="Movie lists">
+        {% for key, (label, _) in categories.items() %}
+        <a href="{{ url_for('index', category=key) }}#movies" {% if key == category and not genre_id %}aria-current="page"{% endif %}>{{ label }}</a>
+        {% endfor %}
+    </nav>
+
+    <nav class="chips" aria-label="Genres">
+        <a class="chip" href="{{ url_for('index') }}#movies" {% if not genre_id %}aria-current="true"{% endif %}>All genres</a>
+        {% for g in genres %}
+        <a class="chip" href="{{ url_for('index', genre=g.id) }}#movies" {% if g.id == genre_id %}aria-current="true"{% endif %}>{{ g.name }}</a>
+        {% endfor %}
+    </nav>
+
+    {% if movies %}
+    <div class="grid">
+        {% for m in movies %}{{ movie_card(m) }}{% endfor %}
+    </div>
+    {{ pagination(page, total_pages) }}
+    {% else %}
+    <p class="empty">No movies to show here yet. Try another genre.</p>
+    {% endif %}
+</section>
+
+{% endblock %}

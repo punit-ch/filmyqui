@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block title %}Your watchlist | FilmyQui{% endblock %}
+
+{% macro stub(m, done) %}
+<article class="stub {{ 'is-watched' if done }}">
+    <a class="stub-poster" href="{{ url_for('movie', movie_id=m.movie_id) }}" tabindex="-1" aria-hidden="true">
+        {% if m.poster_path %}
+        <img src="{{ m.poster_path|img('w185') }}" alt="" loading="lazy" width="185" height="278">
+        {% else %}
+        <span class="poster-missing"><span>{{ m.title }}</span></span>
+        {% endif %}
+    </a>
+    <div class="stub-body">
+        <h3><a href="{{ url_for('movie', movie_id=m.movie_id) }}">{{ m.title }}</a></h3>
+        {% if m.added_at %}<p class="muted">Added {{ m.added_at|pretty_date }}</p>{% endif %}
+        <div class="stub-actions">
+            <form method="post" action="{{ url_for('toggle_watched') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="movie_id" value="{{ m.movie_id }}">
+                <button class="btn btn-ghost btn-sm" type="submit">{{ 'Move back to watch next' if done else 'Mark as watched' }}</button>
+            </form>
+            <form method="post" action="{{ url_for('remove_watchlist') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="movie_id" value="{{ m.movie_id }}">
+                <button class="btn btn-text btn-sm" type="submit">Remove</button>
+            </form>
+        </div>
+    </div>
+</article>
+{% endmacro %}
+
+{% block content %}
+<section class="wrap">
+    <h1 class="section-title">Your watchlist</h1>
+
+    {% if not to_watch and not watched %}
+    <div class="empty">
+        <p>Your watchlist is empty.</p>
+        <p class="muted">Open any movie and choose Add to watchlist to keep it here.</p>
+        <a class="btn btn-primary" href="{{ url_for('index') }}">Find a movie</a>
+    </div>
+    {% endif %}
+
+    {% if to_watch %}
+    <h2 class="subhead">Watch next <span class="muted">({{ to_watch|length }})</span></h2>
+    <div class="stubs">{% for m in to_watch %}{{ stub(m, false) }}{% endfor %}</div>
+    {% endif %}
+
+    {% if watched %}
+    <h2 class="subhead">Watched <span class="muted">({{ watched|length }})</span></h2>
+    <div class="stubs">{% for m in watched %}{{ stub(m, true) }}{% endfor %}</div>
+    {% endif %}
+</section>
+{% endblock %}

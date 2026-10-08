@@ -1,0 +1,39 @@
+{% macro movie_card(movie) %}
+<a class="card" href="{{ url_for('movie', movie_id=movie.id) }}">
+    {% if movie.poster_path %}
+    <img class="poster" src="{{ movie.poster_path|img('w342') }}" alt="" loading="lazy" width="342" height="513">
+    {% else %}
+    <div class="poster poster-missing"><span>{{ movie.title }}</span></div>
+    {% endif %}
+    <h3 class="card-title">{{ movie.title }}</h3>
+    <p class="card-meta">
+        {% if movie.release_date %}<span>{{ movie.release_date[:4] }}</span>{% endif %}
+        {% if movie.vote_count and movie.vote_average %}
+        <span class="score"><span aria-hidden="true">★</span> {{ '%.1f'|format(movie.vote_average) }}<span class="sr"> out of 10</span></span>
+        {% endif %}
+    </p>
+</a>
+{% endmacro %}
+
+{% macro watchlist_button(movie_id, saved, next_url, class="btn-ghost") %}
+<form method="post" action="{{ url_for('remove_watchlist' if saved else 'add_watchlist') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="movie_id" value="{{ movie_id }}">
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <button class="btn {{ class }}" type="submit">{{ 'Remove from watchlist' if saved else 'Add to watchlist' }}</button>
+</form>
+{% endmacro %}
+
+{% macro pagination(page, total_pages) %}
+{% if total_pages > 1 %}
+<nav class="pager" aria-label="Pagination">
+    {% if page > 1 %}<a class="btn btn-ghost" rel="prev" href="{{ page_url(page - 1) }}">Previous</a>{% else %}<span></span>{% endif %}
+    <span class="pager-count">Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}<a class="btn btn-ghost" rel="next" href="{{ page_url(page + 1) }}">Next</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro stars(n) %}
+<span class="stars" role="img" aria-label="{{ n }} out of 5 stars">{{ '★' * n }}<span class="stars-off">{{ '★' * (5 - n) }}</span></span>
+{% endmacro %}
