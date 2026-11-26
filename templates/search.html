@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import movie_card, pagination %}
+
+{% block title %}Results for "{{ query }}" | FilmyQui{% endblock %}
+
+{% block content %}
+<section class="wrap">
+    <h1 class="section-title">Results for "{{ query }}"</h1>
+
+    {% if movies %}
+    <p class="muted">{{ total }} movie{{ '' if total == 1 else 's' }} found</p>
+    <div class="grid">
+        {% for m in movies %}{{ movie_card(m) }}{% endfor %}
+    </div>
+    {{ pagination(page, total_pages) }}
+    {% else %}
+    <div class="empty">
+        <p>No movies match "{{ query }}".</p>
+        <p class="muted">Check the spelling, or try a shorter title.</p>
+        <a class="btn btn-ghost" href="{{ url_for('index') }}">Browse popular movies</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
