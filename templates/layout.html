@@ -51,6 +51,9 @@
     </header>
 
     <main id="main">
+        {% if ephemeral_warning %}
+        <div class="wrap flashes"><p class="flash flash-error" role="alert">{{ ephemeral_warning }}</p></div>
+        {% endif %}
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="wrap flashes" role="status">

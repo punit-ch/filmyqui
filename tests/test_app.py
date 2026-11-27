@@ -563,6 +563,49 @@ def test_debug_mode_is_refused_on_a_proxied_host(monkeypatch):
     appmod.check_runtime_safety()                                       # production is fine
 
 
+def test_hosts_that_lose_files_are_recognised(monkeypatch):
+    for variable in ("VERCEL", "AWS_LAMBDA_FUNCTION_NAME", "NETLIFY", "SPACE_ID", "RENDER", "DATABASE_PATH",
+                     "ALLOW_EPHEMERAL_DATABASE"):
+        monkeypatch.delenv(variable, raising=False)
+    assert appmod.ephemeral_host_reason() is None
+    monkeypatch.setenv("VERCEL", "1")
+    assert appmod.ephemeral_host_reason() == "Vercel"
+    monkeypatch.setenv("ALLOW_EPHEMERAL_DATABASE", "1")
+    assert appmod.ephemeral_host_reason() is None                      # the owner has said they know
+    monkeypatch.delenv("VERCEL")
+    monkeypatch.delenv("ALLOW_EPHEMERAL_DATABASE")
+    monkeypatch.setenv("RENDER", "true")
+    assert "Render" in appmod.ephemeral_host_reason()                  # no DATABASE_PATH: the default disk is wiped
+    monkeypatch.setenv("DATABASE_PATH", "/var/data/movies.db")
+    assert appmod.ephemeral_host_reason() is None                      # pointed at a mounted disk
+
+
+def test_every_page_warns_when_the_host_loses_files(client, monkeypatch):
+    assert b"does not keep files" not in client.get("/").data
+    monkeypatch.setattr(appmod, "EPHEMERAL_HOST", "Vercel")
+    page = client.get("/login").data
+    assert b"running on Vercel" in page and b"disappear" in page
+
+
+def test_you_are_told_why_when_your_account_cannot_be_found(client):
+    signup(client, "asha")
+    sql("DELETE FROM users")                                           # what a wiped database looks like
+    assert "/login" in location(client.get("/watchlist"))
+    page = client.get("/login").data
+    assert b"account could not be found" in page and b"database between visits" in page
+    assert b"could not be found" not in client.get("/login").data     # said once, not on every page
+
+
+def test_you_are_told_when_your_password_was_changed_elsewhere(client):
+    signup(client, "asha")
+    phone = make_client()
+    login(phone)
+    new = "a completely different phrase"
+    post(client, "/account/password", current=PASSWORD, password=new, confirm=new)
+    assert phone.get("/account").status_code == 302
+    assert b"password was changed on another device" in phone.get("/login").data
+
+
 def test_debug_is_off_by_default():
     assert appmod.app.debug is False
     assert appmod.SECURE_COOKIES is True
@@ -810,12 +853,12 @@ def test_tmdb_bad_and_missing_keys_give_friendly_errors(wire, monkeypatch):
 
 def test_the_api_key_never_reaches_visitors(client, wire, monkeypatch):
     monkeypatch.setattr(appmod, "tmdb", REAL_TMDB)
-    monkeypatch.setitem(appmod.app.config, "API_KEY", "testkey")
-    wire.script = [requests.ConnectionError("HTTPSConnectionPool: /genre/movie/list?api_key=testkey")] * 3
+    monkeypatch.setitem(appmod.app.config, "API_KEY", "test-key")
+    wire.script = [requests.ConnectionError("HTTPSConnectionPool: /genre/movie/list?api_key=test-key")] * 3
     page = client.get("/")
-    assert page.status_code == 502 and b"testkey" not in page.data
+    assert page.status_code == 502 and b"test-key" not in page.data
     for header, value in page.headers.items():
-        assert "testkey" not in value
+        assert "test-key" not in value
 
 
 def test_tmdb_handles_invalid_json(wire):

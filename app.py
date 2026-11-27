@@ -62,10 +62,28 @@ def check_runtime_safety():
             "Debug mode exposes an interactive Python console. Unset FLASK_DEBUG and try again.")
 
 
+def ephemeral_host_reason():
+    """Name the host if it is known not to keep files between visits, otherwise None.
+
+    On such hosts every instance (or every restart) starts with its own empty database, so a
+    person can sign up and then, a moment later, find their account missing and be logged out.
+    Set ALLOW_EPHEMERAL_DATABASE=1 to hide the warning (for example for a throw-away demo).
+    """
+    if os.getenv("ALLOW_EPHEMERAL_DATABASE") == "1":
+        return None
+    for variable, name in (("VERCEL", "Vercel"), ("AWS_LAMBDA_FUNCTION_NAME", "AWS Lambda"),
+                           ("NETLIFY", "Netlify"), ("SPACE_ID", "Hugging Face Spaces")):
+        if os.getenv(variable):
+            return name
+    if os.getenv("RENDER") and not os.getenv("DATABASE_PATH"):
+        return "Render without a persistent disk"
+    return None
+
+
 check_runtime_safety()
+EPHEMERAL_HOST = ephemeral_host_reason()
 SECURE_COOKIES = not get_debug_flag()  # plain-http local development only works in debug mode
 
-DEFAULT_DB = "/tmp/movies.db" if os.getenv("VERCEL") else os.path.join(BASE_DIR, "movies.db")
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=secret_key(),
@@ -87,6 +105,10 @@ if os.getenv("TRUST_PROXY") == "1":  # behind Render/Railway/nginx: use the real
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 security_log = logging.getLogger("filmyqui.security")
+if EPHEMERAL_HOST:
+    logging.getLogger("filmyqui").warning(
+        "Running on %s, which does not keep files between visits: accounts, watchlists and reviews "
+        "will be lost. Use a host with a persistent disk (see DEPLOY.md).", EPHEMERAL_HOST)
 
 TMDB_URL = "https://api.themoviedb.org/3"
 CACHE_SECONDS = 600
@@ -299,10 +321,7 @@ def init_db(path=None):
 
 def get_db():
     if "db" not in g:
-        db_path = app.config["DATABASE"]
-        if not os.path.exists(db_path):
-            init_db(db_path)
-        g.db = sqlite3.connect(db_path, timeout=10)
+        g.db = sqlite3.connect(app.config["DATABASE"], timeout=10)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
@@ -536,8 +555,13 @@ def inject_globals():
     count = 0
     if user:
         count = get_db().execute("SELECT COUNT(*) FROM watchlist WHERE user_id = ?", (user["id"],)).fetchone()[0]
+    warning = None
+    if EPHEMERAL_HOST:
+        warning = (f"This site is running on {EPHEMERAL_HOST}, which does not keep files between visits, "
+                   "so accounts, watchlists and reviews will disappear. Move it to a host with a persistent "
+                   "disk (see DEPLOY.md).")
     return {"current_url": request.path + (f"?{qs}" if qs else ""), "current_user": user,
-            "watchlist_count": count}
+            "watchlist_count": count, "ephemeral_warning": warning}
 
 
 def get_page():
@@ -577,9 +601,20 @@ def load_user():
     if uid is None:
         return
     rows = query("SELECT id, username, session_version FROM users WHERE id = ?", (uid,))
-    if not rows or rows[0]["session_version"] != session.get("sv"):
-        session.pop("uid", None)  # account deleted, or password changed on another device
+    if not rows:
+        # The cookie says someone is logged in but this database has never heard of them. Besides a
+        # deleted account, that means the host did not keep the database between visits.
+        session.pop("uid", None)
         session.pop("sv", None)
+        flash("You were logged out because your account could not be found. If this happens right after "
+              "you sign up, the host is not keeping the site's database between visits (see DEPLOY.md).", "error")
+        security_log.warning("session for unknown user_id=%s ip=%s (account deleted or database reset)",
+                             uid, client_ip())
+        return
+    if rows[0]["session_version"] != session.get("sv"):
+        session.pop("uid", None)
+        session.pop("sv", None)
+        flash("You were logged out because your password was changed on another device.", "info")
         return
     g.user = rows[0]
 

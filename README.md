@@ -8,7 +8,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1-000000?logo=flask&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-68%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/tests-72%20passing-2ea44f)
 ![Data](https://img.shields.io/badge/data-TMDB%20API-01B4E4)
 
 [Video demo](https://youtu.be/61XkvAn5n8w?si=ax6pfGaNNtgYaGNO) · [Security audit](SECURITY_AUDIT.md) · [Deploy for free](DEPLOY.md)
@@ -24,7 +24,7 @@
 
 FilmyQui is a movie discovery web app built with **Flask, Python, SQLite, Jinja, HTML, CSS and a little vanilla JavaScript**, using live data from [The Movie Database (TMDB)](https://www.themoviedb.org/) API. You can browse popular, top rated, in-theatre and upcoming movies, filter by genre, search by title, watch trailers, see the cast, create an account, keep a private watchlist, and write star-rated reviews. It is my final project for **CS50x**.
 
-I picked cinema because it is one of my biggest interests, and I wanted a dynamic app that talks to a real third-party API **and** stores its own data (accounts, watchlists, reviews), instead of a static page. The project grew well beyond the course requirements: it now has real authentication, per-user data access, a security-focused request pipeline, a 68-test suite with continuous integration, and a deploy guide for free hosting.
+I picked cinema because it is one of my biggest interests, and I wanted a dynamic app that talks to a real third-party API **and** stores its own data (accounts, watchlists, reviews), instead of a static page. The project grew well beyond the course requirements: it now has real authentication, per-user data access, a security-focused request pipeline, a 72-test suite with continuous integration, and a deploy guide for free hosting.
 
 ---
 
@@ -191,7 +191,7 @@ Security was a main goal of this project, not an afterthought. The full write-up
 
 ## Testing and CI
 
-- **68 pytest tests** run without internet or an API key, because they use a fake TMDB.
+- **72 pytest tests** run without internet or an API key, because they use a fake TMDB.
 - They cover accounts, who can see whose data, XSS, CSRF, rate limits, headers, start-up safety, database upgrades, and the TMDB client itself (retries, timeouts, caching, bad responses).
 - To check the tests really protect the code, I deliberately broke the app in 20 places (for example a delete query that forgets the owner) and confirmed the tests failed each time.
 - **GitHub Actions** runs the tests on Python 3.11 and 3.12 for every push and pull request, plus a weekly security job: `pip-audit` (vulnerable dependencies), `bandit` (static analysis) and `gitleaks` (secrets in the history). Dependabot proposes dependency updates.
@@ -207,7 +207,7 @@ cd filmyqui
 
 # 2. Create a virtual environment and install dependencies
 python -m venv .venv
-source .venv/bin/activate / .venv\Scripts\Activate.ps1         # Windows PowerShell: .venv\Scripts\Activate.ps1
+source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
 
 # 3. Add your settings
@@ -239,6 +239,7 @@ Settings come from environment variables or a `.env` file next to `app.py` (see 
 | `DATABASE_PATH` | Recommended when deployed | Where the SQLite file lives; point it at a persistent disk |
 | `TRUST_PROXY` | Behind a proxy | Set to `1` so rate limiting sees each visitor's real IP |
 | `ALLOWED_HOSTS` | Recommended when deployed | Comma-separated domains the app will answer to |
+| `ALLOW_EPHEMERAL_DATABASE` | No | Set to `1` to hide the "this host loses files" warning on a throw-away demo |
 
 ## Deployment
 
@@ -249,6 +250,8 @@ gunicorn app:app --workers 2
 ```
 
 Set the variables from the table above in the host's dashboard (never commit them), serve only over https, and back up the database file regularly.
+
+> **Not on serverless or wipe-on-restart hosts.** Vercel, Netlify, AWS Lambda, Hugging Face Spaces and Render's free tier lose the SQLite file between visits, so accounts disappear (the symptom is being logged out on the next page and "wrong password" for an account you just created). The app shows a warning when it detects one of these hosts.
 
 ## Project structure
 
@@ -264,7 +267,7 @@ filmyqui/
 │   └── app.js             # Optional polish: trailer on click, scrollers, reveal, tilt
 ├── tests/
 │   ├── conftest.py        # Test setup (secret key, resets caches and rate limits)
-│   └── test_app.py        # 68 tests with a fake TMDB
+│   └── test_app.py        # 72 tests with a fake TMDB
 ├── .github/
 │   ├── workflows/tests.yml  # Tests + pip-audit + bandit + gitleaks
 │   └── dependabot.yml       # Weekly dependency updates

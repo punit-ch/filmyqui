@@ -6,6 +6,8 @@
 
 Total cost: $0.
 
+> **Hosts that will not work with this app (as it is now):** Vercel, Netlify, AWS Lambda and other serverless hosts, Hugging Face Spaces, and Render's free tier without a disk. They start every instance, or every restart, with an empty copy of the files, so the SQLite database is lost. The symptoms are always the same: you sign up and are fine, then the next page logs you out, and logging in says "Wrong username or password" for the account you just made. The app now detects most of these hosts and shows a red warning on every page.
+
 ## 1. Put the new code on GitHub
 
 On your computer, in your `filmyqui` folder: copy everything from the zip's `filmyqui-main/` folder over your files (overwrite), then:
@@ -119,6 +121,7 @@ Create an account, open a movie, add it to your watchlist, write a review, log o
 | "Movie data unavailable" page | TMDB can't be reached or the token is wrong. Re-run step 5 and check `TMDB_READ_TOKEN`. |
 | Forms say "That didn't work" every time | You opened the site over `http://`. Turn on Force HTTPS and use the `https://` address. |
 | "You're doing that too often" for everyone | `TRUST_PROXY=1` is missing from `.env`, so all visitors look like one address. Add it and Reload. |
+| I sign up, then get logged out on the next page, and "Wrong username or password" for the account I just made | The host is not keeping the database file between visits (serverless host, or a disk that is wiped). Move to a host with a persistent disk, such as PythonAnywhere, using this guide. |
 | `unable to open database file` | Run `mkdir -p ~/filmyqui-data` and check `DATABASE_PATH` has your real username. |
 
 ## Other hosts
