@@ -16,12 +16,12 @@
 
 {% block content %}
 <article class="detail">
-    {% if movie.backdrop_path %}
-    <div class="detail-bg" style="background-image: url('{{ movie.backdrop_path|img('w1280') }}')"></div>
+    {% if movie.backdrop_path|img %}
+    <img class="detail-bg" src="{{ movie.backdrop_path|img('w1280') }}" alt="">
     {% endif %}
 
     <div class="wrap detail-grid">
-        {% if movie.poster_path %}
+        {% if movie.poster_path|img %}
         <img class="detail-poster" src="{{ movie.poster_path|img('w500') }}" alt="Poster for {{ movie.title }}" width="500" height="750">
         {% else %}
         <div class="detail-poster poster-missing"><span>{{ movie.title }}</span></div>
@@ -71,11 +71,13 @@
         <ul class="cast">
             {% for person in cast %}
             <li>
-                {% if person.profile_path %}
-                <img src="{{ person.profile_path|img('w185') }}" alt="" loading="lazy" width="185" height="278">
-                {% else %}
-                <div class="poster-missing"><span>{{ person.name }}</span></div>
-                {% endif %}
+                <div class="cast-photo">
+                    {% if person.profile_path|img %}
+                    <img src="{{ person.profile_path|img('w185') }}" alt="" loading="lazy" width="185" height="278">
+                    {% else %}
+                    <div class="poster-missing"><span>{{ person.name }}</span></div>
+                    {% endif %}
+                </div>
                 <p class="cast-name">{{ person.name }}</p>
                 {% if person.character %}<p class="muted cast-role">{{ person.character }}</p>{% endif %}
             </li>
@@ -88,6 +90,19 @@
         <h2 class="section-title">Reviews <span class="muted">({{ review_count }})</span></h2>
 
         <div class="reviews-layout">
+            {% if not current_user %}
+            <div class="review-form">
+                <h3>Write a review</h3>
+                <p class="muted">Log in to rate this movie and share what you thought.</p>
+                <a class="btn btn-primary" href="{{ url_for('login', next=current_url ~ '#reviews') }}">Log in</a>
+                <p class="muted">New here? <a href="{{ url_for('register', next=current_url ~ '#reviews') }}"><strong>Create an account</strong></a></p>
+            </div>
+            {% elif already_reviewed %}
+            <div class="review-form">
+                <h3>Thanks for reviewing</h3>
+                <p class="muted">You've already reviewed this movie. You can delete your review below if you want to write a new one.</p>
+            </div>
+            {% else %}
             <form class="review-form" action="{{ url_for('add_review') }}" method="post">
                 <h3>Write a review</h3>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -108,14 +123,12 @@
                     <input id="website" type="text" name="website" tabindex="-1" autocomplete="off">
                 </div>
 
-                <label for="username">Your name</label>
-                <input id="username" type="text" name="username" maxlength="40" required autocomplete="nickname">
-
-                <label for="review">Your review</label>
+                <label for="review">Your review <span class="muted">(posting as {{ current_user.username }})</span></label>
                 <textarea id="review" name="review" rows="5" maxlength="2000" required></textarea>
 
                 <button class="btn btn-primary" type="submit">Post review</button>
             </form>
+            {% endif %}
 
             <div class="review-list">
                 {% for r in reviews %}
@@ -126,7 +139,7 @@
                         {% if r.created_at %}<span class="muted">{{ r.created_at|pretty_date }}</span>{% endif %}
                     </header>
                     <p>{{ r.review }}</p>
-                    {% if r.id in my_reviews %}
+                    {% if current_user and r.user_id == current_user.id %}
                     <form method="post" action="{{ url_for('delete_review', review_id=r.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="next" value="{{ current_url }}#reviews">

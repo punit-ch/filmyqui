@@ -1,10 +1,12 @@
 {% macro movie_card(movie) %}
-<a class="card" href="{{ url_for('movie', movie_id=movie.id) }}">
-    {% if movie.poster_path %}
-    <img class="poster" src="{{ movie.poster_path|img('w342') }}" alt="" loading="lazy" width="342" height="513">
-    {% else %}
-    <div class="poster poster-missing"><span>{{ movie.title }}</span></div>
-    {% endif %}
+<a class="card" href="{{ url_for('movie', movie_id=movie.id) }}" data-reveal>
+    <div class="poster-frame">
+        {% if movie.poster_path|img %}
+        <img class="poster" src="{{ movie.poster_path|img('w342') }}" alt="" loading="lazy" width="342" height="513">
+        {% else %}
+        <div class="poster-missing"><span>{{ movie.title }}</span></div>
+        {% endif %}
+    </div>
     <h3 class="card-title">{{ movie.title }}</h3>
     <p class="card-meta">
         {% if movie.release_date %}<span>{{ movie.release_date[:4] }}</span>{% endif %}
@@ -36,4 +38,13 @@
 
 {% macro stars(n) %}
 <span class="stars" role="img" aria-label="{{ n }} out of 5 stars">{{ '★' * n }}<span class="stars-off">{{ '★' * (5 - n) }}</span></span>
+{% endmacro %}
+
+{% macro password_field(id, name, label, autocomplete, hint=None) %}
+<label for="{{ id }}">{{ label }}</label>
+<div class="pw-field">
+    <input id="{{ id }}" type="password" name="{{ name }}" required minlength="10" maxlength="128" autocomplete="{{ autocomplete }}">
+    <button class="pw-toggle" type="button" data-pw-toggle="{{ id }}" aria-pressed="false" hidden>Show</button>
+</div>
+{% if hint %}<p class="field-hint">{{ hint }}</p>{% endif %}
 {% endmacro %}

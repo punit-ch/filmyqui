@@ -3,6 +3,11 @@ name: tests
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "17 5 * * 1"   # weekly, so new advisories for your dependencies are noticed
+
+permissions:
+  contents: read
 
 jobs:
   pytest:
@@ -19,3 +24,22 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # scan the whole Git history, not just the latest commit
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - name: Known vulnerabilities in dependencies
+        run: pip-audit -r requirements.txt
+      - name: Static analysis of the code
+        run: bandit -q -r app.py
+      - name: Secrets in the Git history
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

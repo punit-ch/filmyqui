@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import password_field %}
+
+{% block title %}Log in | FilmyQui{% endblock %}
+
+{% block content %}
+<section class="wrap auth-wrap">
+    <form class="auth-card" method="post" action="{{ url_for('login') }}">
+        <h1>Welcome back</h1>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+        <label for="username">Username</label>
+        <input id="username" type="text" name="username" value="{{ username }}" required maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false">
+
+        {{ password_field("password", "password", "Password", "current-password") }}
+
+        <button class="btn btn-primary" type="submit">Log in</button>
+        <p class="switch">New here? <a href="{{ url_for('register', next=next_url) }}">Create an account</a></p>
+    </form>
+</section>
+{% endblock %}
