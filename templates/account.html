@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import password_field %}
+
+{% block title %}Your account | FilmyQui{% endblock %}
+
+{% block content %}
+<section class="wrap">
+    <h1 class="section-title">Your account</h1>
+
+    <div class="account-grid">
+        <div class="panel">
+            <h2>{{ current_user.username }}</h2>
+            <div class="stat-row">
+                <p><strong>{{ stats.saved }}</strong> on your watchlist</p>
+                <p><strong>{{ stats.reviews }}</strong> reviews</p>
+            </div>
+            <p class="muted">Only you can see your watchlist. Your username shows next to the reviews you write.</p>
+        </div>
+
+        <div class="panel">
+            <h2>Change password</h2>
+            <form method="post" action="{{ url_for('change_password') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {{ password_field("current", "current", "Current password", "current-password") }}
+                {{ password_field("new", "password", "New password", "new-password", "At least 10 characters.") }}
+                {{ password_field("new2", "confirm", "Confirm new password", "new-password") }}
+                <button class="btn btn-primary" type="submit">Change password</button>
+            </form>
+        </div>
+
+        <div class="panel danger">
+            <h2>Delete account</h2>
+            <p class="muted">This permanently deletes your account, your watchlist and your reviews. It can't be undone.</p>
+            <form method="post" action="{{ url_for('delete_account') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {{ password_field("delete-current", "current", "Type your password to confirm", "current-password") }}
+                <button class="btn btn-danger" type="submit">Delete my account</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import movie_card, watchlist_button, stars %}
+
+{% block title %}{{ movie.title }}{% if movie.release_date %} ({{ movie.release_date[:4] }}){% endif %} | FilmyQui{% endblock %}
+
+{% block meta %}
+<meta name="description" content="{{ movie.overview|truncate(200) if movie.overview else 'Details, cast, trailer and reviews on FilmyQui.' }}">
+<meta property="og:site_name" content="FilmyQui">
+<meta property="og:type" content="video.movie">
+<meta property="og:title" content="{{ movie.title }}{% if movie.release_date %} ({{ movie.release_date[:4] }}){% endif %}">
+<meta property="og:description" content="{{ movie.overview|truncate(200) if movie.overview else 'Details, cast, trailer and reviews on FilmyQui.' }}">
+<meta property="og:url" content="{{ request.base_url }}">
+{% if movie.backdrop_path or movie.poster_path %}<meta property="og:image" content="{{ (movie.backdrop_path or movie.poster_path)|img('w780') }}">{% endif %}
+<meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+
+{% block content %}
+<article class="detail">
+    {% if movie.backdrop_path|img %}
+    <img class="detail-bg" src="{{ movie.backdrop_path|img('w1280') }}" alt="">
+    {% endif %}
+
+    <div class="wrap detail-grid">
+        {% if movie.poster_path|img %}
+        <img class="detail-poster" src="{{ movie.poster_path|img('w500') }}" alt="Poster for {{ movie.title }}" width="500" height="750">
+        {% else %}
+        <div class="detail-poster poster-missing"><span>{{ movie.title }}</span></div>
+        {% endif %}
+
+        <div class="detail-info">
+            <h1>{{ movie.title }}</h1>
+            {% if movie.tagline %}<p class="tagline">{{ movie.tagline }}</p>{% endif %}
+
+            <ul class="facts">
+                {% if movie.release_date %}<li>{{ movie.release_date[:4] }}</li>{% endif %}
+                {% if movie.runtime %}<li>{{ movie.runtime|runtime }}</li>{% endif %}
+                {% if movie.vote_count %}<li class="score"><span aria-hidden="true">★</span> {{ '%.1f'|format(movie.vote_average) }} <span class="muted">on TMDB ({{ movie.vote_count }} votes)</span></li>{% endif %}
+                {% if community %}<li class="score"><span aria-hidden="true">★</span> {{ community }} <span class="muted">from FilmyQui reviews</span></li>{% endif %}
+            </ul>
+
+            {% if movie.genres %}
+            <p class="genres">{% for genre in movie.genres %}<a class="chip" href="{{ url_for('index', genre=genre.id) }}">{{ genre.name }}</a>{% endfor %}</p>
+            {% endif %}
+
+            <p class="overview">{{ movie.overview or "No description is available for this movie yet." }}</p>
+
+            {% if directors %}<p class="credit"><strong>Directed by</strong> {{ directors|join(', ') }}</p>{% endif %}
+
+            <div class="actions">
+                {% if trailer_key %}<a class="btn btn-primary" href="#trailer">Watch trailer</a>{% endif %}
+                {{ watchlist_button(movie.id, in_watchlist, current_url) }}
+            </div>
+        </div>
+    </div>
+</article>
+
+<div class="wrap">
+    {% if trailer_key %}
+    <section id="trailer" class="block">
+        <h2 class="section-title">Trailer</h2>
+        <a class="trailer" href="https://www.youtube.com/watch?v={{ trailer_key }}" data-trailer="{{ trailer_key }}" target="_blank" rel="noopener" aria-label="Play the trailer for {{ movie.title }}">
+            <img src="https://i.ytimg.com/vi/{{ trailer_key }}/hqdefault.jpg" alt="" loading="lazy">
+            <span class="play" aria-hidden="true"></span>
+        </a>
+    </section>
+    {% endif %}
+
+    {% if cast %}
+    <section class="block">
+        <h2 class="section-title">Cast</h2>
+        <ul class="cast">
+            {% for person in cast %}
+            <li>
+                <div class="cast-photo">
+                    {% if person.profile_path|img %}
+                    <img src="{{ person.profile_path|img('w185') }}" alt="" loading="lazy" width="185" height="278">
+                    {% else %}
+                    <div class="poster-missing"><span>{{ person.name }}</span></div>
+                    {% endif %}
+                </div>
+                <p class="cast-name">{{ person.name }}</p>
+                {% if person.character %}<p class="muted cast-role">{{ person.character }}</p>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <section id="reviews" class="block">
+        <h2 class="section-title">Reviews <span class="muted">({{ review_count }})</span></h2>
+
+        <div class="reviews-layout">
+            {% if not current_user %}
+            <div class="review-form">
+                <h3>Write a review</h3>
+                <p class="muted">Log in to rate this movie and share what you thought.</p>
+                <a class="btn btn-primary" href="{{ url_for('login', next=current_url ~ '#reviews') }}">Log in</a>
+                <p class="muted">New here? <a href="{{ url_for('register', next=current_url ~ '#reviews') }}"><strong>Create an account</strong></a></p>
+            </div>
+            {% elif already_reviewed %}
+            <div class="review-form">
+                <h3>Thanks for reviewing</h3>
+                <p class="muted">You've already reviewed this movie. You can delete your review below if you want to write a new one.</p>
+            </div>
+            {% else %}
+            <form class="review-form" action="{{ url_for('add_review') }}" method="post">
+                <h3>Write a review</h3>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="movie_id" value="{{ movie.id }}">
+
+                <fieldset class="rating-input">
+                    <legend>Your rating</legend>
+                    <div class="star-row">
+                        {% for n in [5, 4, 3, 2, 1] %}
+                        <input type="radio" name="rating" id="star{{ n }}" value="{{ n }}" required>
+                        <label for="star{{ n }}"><span class="sr">{{ n }} star{{ '' if n == 1 else 's' }}</span><span aria-hidden="true">★</span></label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+
+                <div class="hp" aria-hidden="true">
+                    <label for="website">Leave this field empty</label>
+                    <input id="website" type="text" name="website" tabindex="-1" autocomplete="off">
+                </div>
+
+                <label for="review">Your review <span class="muted">(posting as {{ current_user.username }})</span></label>
+                <textarea id="review" name="review" rows="5" maxlength="2000" required></textarea>
+
+                <button class="btn btn-primary" type="submit">Post review</button>
+            </form>
+            {% endif %}
+
+            <div class="review-list">
+                {% for r in reviews %}
+                <article class="review">
+                    <header>
+                        <strong>{{ r.username }}</strong>
+                        {% if r.rating %}{{ stars(r.rating) }}{% endif %}
+                        {% if r.created_at %}<span class="muted">{{ r.created_at|pretty_date }}</span>{% endif %}
+                    </header>
+                    <p>{{ r.review }}</p>
+                    {% if current_user and r.user_id == current_user.id %}
+                    <form method="post" action="{{ url_for('delete_review', review_id=r.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ current_url }}#reviews">
+                        <button class="btn btn-text btn-sm" type="submit">Delete my review</button>
+                    </form>
+                    {% endif %}
+                </article>
+                {% else %}
+                <p class="empty">No reviews yet. Be the first to share what you thought.</p>
+                {% endfor %}
+                {% if review_count > reviews|length %}
+                <p class="muted">Showing the latest {{ reviews|length }} of {{ review_count }} reviews.</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    {% if recommendations %}
+    <section class="block">
+        <h2 class="section-title">If you liked this</h2>
+        <div class="grid">
+            {% for rec in recommendations %}{{ movie_card(rec) }}{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
