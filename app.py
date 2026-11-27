@@ -65,6 +65,7 @@ def check_runtime_safety():
 check_runtime_safety()
 SECURE_COOKIES = not get_debug_flag()  # plain-http local development only works in debug mode
 
+DEFAULT_DB = "/tmp/movies.db" if os.getenv("VERCEL") else os.path.join(BASE_DIR, "movies.db")
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=secret_key(),
@@ -298,7 +299,10 @@ def init_db(path=None):
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(app.config["DATABASE"], timeout=10)
+        db_path = app.config["DATABASE"]
+        if not os.path.exists(db_path):
+            init_db(db_path)
+        g.db = sqlite3.connect(db_path, timeout=10)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
